@@ -200,13 +200,17 @@ h1 em.s { font-size: 1.12em; line-height: .8; }
   padding: 3px 9px; border-radius: 999px; background: rgba(12,16,10,.8); border: 1px solid var(--border-hi);
   transform: translate(-50%, -100%);
 }
-.orbit { display: grid; place-items: center; }
+.orbit { display: grid; place-items: center; margin-bottom: 18px; }
 .orbit .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(201,242,108,.16); }
-.orbit .ring.r1 { width: 180px; height: 180px; }
-.orbit .ring.r2 { width: 120px; height: 120px; border-color: rgba(201,242,108,.24); }
-.orbit .ring.r3 { width: 64px; height: 64px; background: radial-gradient(circle, rgba(201,242,108,.35), rgba(201,242,108,.05)); border-color: rgba(201,242,108,.5); box-shadow: 0 0 40px var(--lime-glow); display: grid; place-items: center; color: var(--lime); }
-.orbit .spin { position: absolute; width: 180px; height: 180px; animation: spin 18s linear infinite; }
-.orbit .spin.b { width: 120px; height: 120px; animation-duration: 11s; animation-direction: reverse; }
+.orbit .ring.r1 { width: 186px; height: 186px; }
+.orbit .ring.r2 { width: 140px; height: 140px; border-color: rgba(201,242,108,.24); }
+.orbit .ring.r3 { width: 100px; height: 100px; padding: 3px; border-color: rgba(201,242,108,.55); background: radial-gradient(circle, rgba(201,242,108,.35), rgba(201,242,108,.05)); box-shadow: 0 0 0 6px rgba(201,242,108,.06), 0 0 44px var(--lime-glow); }
+.orbit .ring.r3::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 1px solid rgba(201,242,108,.5); animation: ping 2.8s cubic-bezier(.2,.6,.3,1) infinite; }
+@keyframes ping { 0% { transform: scale(.92); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+.orbit .face { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: saturate(.92) contrast(1.04); }
+.orbit .rec { position: absolute; right: -6px; bottom: 2px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #12190a; background: var(--lime); box-shadow: 0 0 0 3px var(--bg-2), 0 0 18px var(--lime-glow); }
+.orbit .spin { position: absolute; width: 186px; height: 186px; animation: spin 18s linear infinite; }
+.orbit .spin.b { width: 140px; height: 140px; animation-duration: 11s; animation-direction: reverse; }
 .orbit .dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 10px var(--lime); }
 @keyframes spin { to { rotate: 360deg; } }
 
@@ -530,7 +534,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wr
           <span class="ring r2"></span>
           <span class="spin"><i class="dot" style="left:-3px; top:50%"></i><i class="dot" style="right:12px; top:22px"></i><i class="dot" style="right:20px; bottom:14px"></i></span>
           <span class="spin b"><i class="dot" style="left:50%; top:-3px"></i></span>
-          <span class="ring r3"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span>
+          <span class="ring r3"><img class="face" src="img/portrait-face.jpg" alt="Данияр Нурсалимов" width="180" height="180" decoding="async"><span class="rec"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span></span>
         </div>
       </article>
     </div>
