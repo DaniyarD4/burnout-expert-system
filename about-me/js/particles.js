@@ -23,23 +23,42 @@
   // ---------- shapes ----------
   const build = (fn) => { const a = new Float32Array(N * 3); for (let i = 0; i < N; i++) fn(i, a, i * 3); return a; };
 
-  // sigil: ring, vertical axis, eye-shaped orbit and small planets
-  const sigil = build((i, a, o) => {
-    const k = rnd[i * 4 + 2], w = 0.022;
-    let x, y, z = gauss() * 0.03;
-    if (k < 0.24) { const t = Math.random() * TAU; x = Math.cos(t) * 1.0; y = Math.sin(t) * 1.0; }
-    else if (k < 0.42) { x = (Math.random() * 2 - 1) * 3.1; y = (Math.random() < 0.5 ? 1 : -1) * 1.45 * (1 - (x / 3.1) ** 2); }
-    else if (k < 0.58) { y = gauss() * 1.1; y = Math.max(-2.7, Math.min(2.7, y)); x = 0; }
-    else if (k < 0.65) { x = gauss() * 0.7; y = 0; }
-    else if (k < 0.76) {
-      const P = [[-2.35, 0.95, 0.2], [2.25, -1.05, 0.16], [1.05, 2.45, 0.12], [-1.4, -2.3, 0.1]][Math.floor(Math.random() * 4)];
-      const t = Math.random() * TAU; x = P[0] + Math.cos(t) * P[2]; y = P[1] + Math.sin(t) * P[2];
+  // small planetary system: sun, tilted orbits, planets that actually orbit (see updateSystem)
+  const ORBITS = [0.75, 1.2, 1.65, 2.15, 2.65];
+  const PLANETS = ORBITS.map((R, k) => ({ R, phase: k * 2.1 + 0.6, size: [0.07, 0.11, 0.09, 0.16, 0.08][k], ring: k === 3 }));
+  const sysR = new Float32Array(N), sysT = new Float32Array(N), sysH = new Float32Array(N), sysW = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const k = rnd[i * 4 + 2];
+    let px, pz, h = 0, w;
+    if (k < 0.14) { // sun
+      const r = Math.abs(gauss()) * (k < 0.08 ? 0.08 : 0.22), t = Math.random() * TAU, u = Math.random() * 2 - 1;
+      px = Math.cos(t) * r * Math.sqrt(1 - u * u); pz = Math.sin(t) * r * Math.sqrt(1 - u * u); h = u * r; w = 0.25;
+    } else if (k < 0.58) { // orbit lines
+      const R = ORBITS[Math.floor(Math.random() * ORBITS.length)], t = Math.random() * TAU;
+      px = Math.cos(t) * R + gauss() * 0.012; pz = Math.sin(t) * R + gauss() * 0.012; w = 0.5 * Math.pow(R, -1.5);
+    } else if (k < 0.86) { // planets (+ one ringed planet)
+      const P = PLANETS[Math.floor(Math.random() * PLANETS.length)];
+      const cx = Math.cos(P.phase) * P.R, cz = Math.sin(P.phase) * P.R;
+      if (P.ring && Math.random() < 0.45) { const t = Math.random() * TAU, rr = P.size * (1.7 + Math.random() * 0.5); px = cx + Math.cos(t) * rr; pz = cz + Math.sin(t) * rr; h = Math.cos(t) * rr * 0.25; }
+      else { const t = Math.random() * TAU, u = Math.random() * 2 - 1, s2 = Math.sqrt(1 - u * u), r = P.size * Math.cbrt(Math.random()); px = cx + Math.cos(t) * s2 * r; pz = cz + Math.sin(t) * s2 * r; h = u * r; }
+      w = 0.5 * Math.pow(P.R, -1.5);
+    } else { // dust disc
+      const R = 0.5 + Math.random() * 3.4, t = Math.random() * TAU;
+      px = Math.cos(t) * R; pz = Math.sin(t) * R; h = gauss() * 0.12; w = 0.5 * Math.pow(R, -1.5);
     }
-    else if (k < 0.82) { x = gauss() * 0.07; y = gauss() * 0.07; }
-    else { const t = Math.random() * TAU, r = 1.6 + Math.abs(gauss()) * 1.6; x = Math.cos(t) * r * 1.3; y = Math.sin(t) * r * 0.9; z = gauss() * 0.8; }
-    const S = 0.72;
-    a[o] = (x + gauss() * w) * S; a[o + 1] = (y + gauss() * w) * S; a[o + 2] = z * S;
-  });
+    sysR[i] = Math.hypot(px, pz); sysT[i] = Math.atan2(pz, px); sysH[i] = h; sysW[i] = w;
+  }
+  const TILT_S = Math.sin(0.62), TILT_C = Math.cos(0.62), SYS_SCALE = 0.72;
+  const system = new Float32Array(N * 3);
+  const updateSystem = (time) => {
+    for (let i = 0; i < N; i++) {
+      const t = sysT[i] + sysW[i] * time, x = Math.cos(t) * sysR[i], z = Math.sin(t) * sysR[i];
+      system[i * 3] = x * SYS_SCALE;
+      system[i * 3 + 1] = (sysH[i] - z * TILT_S) * SYS_SCALE;
+      system[i * 3 + 2] = z * TILT_C * SYS_SCALE;
+    }
+  };
+  updateSystem(0);
 
   const galaxy = build((i, a, o) => {
     const arm = Math.floor(rnd[i * 4] * 3), r = Math.pow(Math.random(), 0.6) * 5.5;
@@ -108,10 +127,10 @@
     a[o] = Math.cos(t) * r; a[o + 1] = Math.sin(t) * r; a[o + 2] = gauss() * 0.1;
   });
 
-  const shapes = [sigil, galaxy, mountain, hourglass, bloom, moon, field, portrait];
+  const shapes = [system, galaxy, mountain, hourglass, bloom, moon, field, portrait];
   // per-stage look: [offsetX desktop, offsetY desktop, offsetY mobile, dim, moonlight share, spin speed, rotation allowed]
   const LOOK = [
-    [2.75, 1.0, 2.35, 1.0, 0.1, 0.0, 0],
+    [2.35, 0.6, 2.1, 1.0, 0.12, 0.0, 0],
     [0, 0, 0, 0.7, 0.5, 0.05, 1],
     [1.0, 0, 0.3, 0.5, 0.06, 0.0, 0],
     [0, 0, 0, 0.6, 0.12, 0.18, 1],
@@ -127,9 +146,10 @@
     attribute vec3 aPos; attribute vec4 aRnd; attribute vec3 aPhoto;
     uniform mat4 uProj; uniform float uTime, uPixel, uSize, uHolo, uPhoto, uRot, uTiltX, uTiltY, uScale;
     uniform vec3 uOffset;
+    uniform vec3 uC1, uC2, uC3, uC4, uS1, uS2, uS3, uTint;
     varying vec3 vCol; varying float vA;
-    vec3 gold(float r) { return r < .5 ? vec3(.93,.72,.4) : r < .75 ? vec3(1.,.9,.7) : r < .9 ? vec3(.9,.5,.2) : vec3(1.,.97,.9); }
-    vec3 moon(float r) { return r < .55 ? vec3(.86,.89,.95) : r < .85 ? vec3(.66,.73,.88) : vec3(1.,.93,.82); }
+    vec3 mainTone(float r) { return r < .5 ? uC1 : r < .75 ? uC2 : r < .9 ? uC3 : uC4; }
+    vec3 moonTone(float r) { return r < .55 ? uS1 : r < .85 ? uS2 : uS3; }
     void main() {
       vec3 p = aPos * uScale;
       float t = uTime;
@@ -143,8 +163,8 @@
       gl_Position = uProj * mv;
       float sz = uSize * (.45 + aRnd.w * aRnd.w * 1.6);
       gl_PointSize = clamp(sz * uPixel / -mv.z, 1., 40.);
-      vec3 col = aRnd.y < uHolo ? moon(aRnd.z) : gold(aRnd.z);
-      vCol = mix(col, aPhoto * vec3(1.08, .9, .7), uPhoto);
+      vec3 col = aRnd.y < uHolo ? moonTone(aRnd.z) : mainTone(aRnd.z);
+      vCol = mix(col, aPhoto * uTint, uPhoto);
       vA = (.5 + .5 * sin(t * (1. + aRnd.x * 2.) + aRnd.y * 60.)) * .6 + .4;
       vA *= smoothstep(-22., -4., mv.z);
     }`;
@@ -178,10 +198,19 @@
   buf(rnd, 'aRnd', 4);
   const photoBuf = buf(photo, 'aPhoto', 3);
   const U = {};
-  ['uProj', 'uTime', 'uPixel', 'uSize', 'uHolo', 'uPhoto', 'uRot', 'uTiltX', 'uTiltY', 'uScale', 'uOffset', 'uDim'].forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
+  ['uProj', 'uTime', 'uPixel', 'uSize', 'uHolo', 'uPhoto', 'uRot', 'uTiltX', 'uTiltY', 'uScale', 'uOffset', 'uDim', 'uC1', 'uC2', 'uC3', 'uC4', 'uS1', 'uS2', 'uS3', 'uTint'].forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
+  const applyTheme = () => {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (name, fb) => { const p = cs.getPropertyValue(name).trim().split(/\s+/).map(Number); return p.length === 3 && p.every((x) => !isNaN(x)) ? p : fb; };
+    [['uC1', '--pc1'], ['uC2', '--pc2'], ['uC3', '--pc3'], ['uC4', '--pc4'], ['uS1', '--ps1'], ['uS2', '--ps2'], ['uS3', '--ps3'], ['uTint', '--photo-tint']]
+      .forEach(([u, c]) => gl.uniform3fv(U[u], v(c, [1, 1, 1])));
+    const bg = v('--ink-rgb', null) || cs.getPropertyValue('--ink-rgb').split(',').map((x) => +x);
+    gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
+  };
+  applyTheme();
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-  gl.clearColor(0.024, 0.02, 0.016, 1);
 
   let W = 0, H = 0, aspect = 1;
   const FOV = 50 * Math.PI / 180;
@@ -271,7 +300,9 @@
     const tgt = targetStage();
     s += (tgt - s) * (reduce ? 1 : Math.min(1, dt * 2.6));
     if (Math.abs(s - tgt) < 1e-4) s = tgt;
-    if (Math.abs(s - lastS) > 1e-5) { morph(); lastS = s; }
+    const orbiting = s < 1 && !reduce;
+    if (orbiting) updateSystem(now / 1000);
+    if (orbiting || Math.abs(s - lastS) > 1e-5) { morph(); lastS = s; }
 
     mouse.x += (mouse.tx - mouse.x) * 0.05; mouse.y += (mouse.ty - mouse.y) * 0.05;
     if (!reduce) rot += dt * lookAt(5);
@@ -283,9 +314,11 @@
     let r = rot % TAU; if (r > Math.PI) r -= TAU;
     gl.uniform1f(U.uRot, r * lookAt(6));
     gl.uniform1f(U.uTiltX, mouse.x * (0.5 - pw * 0.3));
-    gl.uniform1f(U.uTiltY, mouse.y * 0.3);
+    gl.uniform1f(U.uTiltY, mouse.y * 0.3 + (narrow ? 0.45 * Math.max(0, 1 - s) : 0)); // phones see the high-placed disc from below; open it up
     gl.uniform3f(U.uOffset, ox, oy, 0);
-    gl.uniform1f(U.uScale, narrow ? 0.62 : 1);
+    const hero = Math.max(0, 1 - s); // phones: the planet system needs a smaller scale and finer points to stay crisp
+    gl.uniform1f(U.uScale, narrow ? 0.62 * (1 - 0.15 * hero) : 1);
+    gl.uniform1f(U.uSize, (mobile ? 0.05 : 0.042) * (narrow ? 1 - 0.45 * hero : 1));
     gl.uniform1f(U.uDim, lookAt(3) * (narrow ? 0.85 : 1));
     gl.uniform1f(U.uHolo, lookAt(4));
     gl.uniform1f(U.uPhoto, pw);
