@@ -4,7 +4,7 @@
   const $$ = (q, el = document) => [...el.querySelectorAll(q)];
 
   // ---------- text scramble ----------
-  const GLYPHS = '█▓▒░<>/\\_=+*#01АБВГДЖЗИКЛМНПРСТФХЦЧШЭЮЯ';
+  const GLYPHS = '✦✧☾☽◯△▽⊙⋆∞⟡◇·ϟ⌛';
   const scramble = (el) => {
     if (reduce || el.dataset.done) return;
     el.dataset.done = '1';

@@ -23,40 +23,55 @@
   // ---------- shapes ----------
   const build = (fn) => { const a = new Float32Array(N * 3); for (let i = 0; i < N; i++) fn(i, a, i * 3); return a; };
 
-  const infinity = build((i, a, o) => {
-    if (rnd[i * 4 + 2] < 0.22) { // dust around
-      const r = 1.2 + Math.random() * 3.5, t = Math.random() * TAU;
-      a[o] = Math.cos(t) * r * 1.3; a[o + 1] = gauss() * 1.1; a[o + 2] = Math.sin(t) * r * 0.6;
-      return;
+  // sigil: ring, vertical axis, eye-shaped orbit and small planets
+  const sigil = build((i, a, o) => {
+    const k = rnd[i * 4 + 2], w = 0.022;
+    let x, y, z = gauss() * 0.03;
+    if (k < 0.24) { const t = Math.random() * TAU; x = Math.cos(t) * 1.0; y = Math.sin(t) * 1.0; }
+    else if (k < 0.42) { x = (Math.random() * 2 - 1) * 3.1; y = (Math.random() < 0.5 ? 1 : -1) * 1.45 * (1 - (x / 3.1) ** 2); }
+    else if (k < 0.58) { y = gauss() * 1.1; y = Math.max(-2.7, Math.min(2.7, y)); x = 0; }
+    else if (k < 0.65) { x = gauss() * 0.7; y = 0; }
+    else if (k < 0.76) {
+      const P = [[-2.35, 0.95, 0.2], [2.25, -1.05, 0.16], [1.05, 2.45, 0.12], [-1.4, -2.3, 0.1]][Math.floor(Math.random() * 4)];
+      const t = Math.random() * TAU; x = P[0] + Math.cos(t) * P[2]; y = P[1] + Math.sin(t) * P[2];
     }
-    const t = Math.random() * TAU, d = 1 + Math.sin(t) ** 2, A = 2.3;
-    const x = A * Math.cos(t) / d, y = A * Math.sin(t) * Math.cos(t) / d;
-    const w = 0.06 + 0.1 * Math.random() ** 3;
-    a[o] = x + gauss() * w; a[o + 1] = y + gauss() * w; a[o + 2] = Math.sin(t * 2) * 0.35 + gauss() * w;
+    else if (k < 0.82) { x = gauss() * 0.07; y = gauss() * 0.07; }
+    else { const t = Math.random() * TAU, r = 1.6 + Math.abs(gauss()) * 1.6; x = Math.cos(t) * r * 1.3; y = Math.sin(t) * r * 0.9; z = gauss() * 0.8; }
+    const S = 0.72;
+    a[o] = (x + gauss() * w) * S; a[o + 1] = (y + gauss() * w) * S; a[o + 2] = z * S;
   });
 
-  const nebula = build((i, a, o) => {
+  const galaxy = build((i, a, o) => {
     const arm = Math.floor(rnd[i * 4] * 3), r = Math.pow(Math.random(), 0.6) * 5.5;
     const t = arm / 3 * TAU + r * 0.9 + gauss() * 0.35;
     a[o] = Math.cos(t) * r + gauss() * 0.3; a[o + 1] = gauss() * 0.35 * (1 + r * 0.15); a[o + 2] = Math.sin(t) * r * 0.75 + gauss() * 0.3;
   });
 
-  // double helix: two strands — the technical and the visual line
-  const helix = build((i, a, o) => {
-    const strand = rnd[i * 4 + 1] < 0.5 ? 0 : 1, x = (Math.random() - 0.5) * 11;
-    if (rnd[i * 4 + 2] < 0.12) { // rungs
-      const ph = Math.round(x * 2) / 2 * 1.3, k = Math.random() * 2 - 1;
-      a[o] = Math.round(x * 2) / 2; a[o + 1] = Math.cos(ph) * 1.05 * k; a[o + 2] = Math.sin(ph) * 1.05 * k;
-      return;
-    }
-    const ph = x * 1.3 + strand * Math.PI, w = 0.07;
-    a[o] = x + gauss() * w; a[o + 1] = Math.cos(ph) * 1.05 + gauss() * w; a[o + 2] = Math.sin(ph) * 1.05 + gauss() * w;
+  // mountain at sunset: lit ridge, faint slopes, sun disc behind the peak, cloud band
+  const PEAKS = [[0.7, 2.1, 1.05], [-2.2, 0.9, 0.8], [-3.9, 0.3, 0.7], [3.0, 0.75, 0.75], [4.8, 0.1, 0.6], [-0.9, 1.0, 0.9]];
+  const ridge = (x) => Math.max(...PEAKS.map(([c, h, s]) => h - Math.abs(x - c) * s)) + Math.sin(x * 7.3) * 0.04 + Math.sin(x * 17.1) * 0.02;
+  const mountain = build((i, a, o) => {
+    const k = rnd[i * 4 + 2];
+    let x, y, z = gauss() * 0.05;
+    if (k < 0.42) { x = (Math.random() - 0.5) * 11; y = ridge(x) + gauss() * 0.025; }
+    else if (k < 0.72) { x = (Math.random() - 0.5) * 11; const top = ridge(x); y = top - Math.pow(Math.random(), 0.55) * (top + 2.4); z = gauss() * 0.15; }
+    else if (k < 0.86) { const t = Math.random() * TAU, r = k < 0.8 ? 0.62 : Math.sqrt(Math.random()) * 0.6; x = 0.7 + Math.cos(t) * r; y = 1.75 + Math.sin(t) * r; z = -0.6; if (y < ridge(x)) { y = ridge(x) + 0.05; } }
+    else { x = (Math.random() - 0.5) * 11; y = -1.0 + gauss() * 0.22; z = 0.4 + gauss() * 0.3; }
+    a[o] = x; a[o + 1] = y - 0.3; a[o + 2] = z;
   });
 
-  const torus = build((i, a, o) => {
-    const u = Math.random() * TAU, v = Math.random() * TAU, R = 2.3, r = 0.08 + 0.32 * Math.random() ** 2;
-    const rr = rnd[i * 4 + 2] < 0.15 ? R + gauss() * 0.9 : R;
-    a[o] = (rr + r * Math.cos(v)) * Math.cos(u); a[o + 1] = (rr + r * Math.cos(v)) * Math.sin(u); a[o + 2] = r * Math.sin(v) + (rr !== R ? gauss() * 0.4 : 0);
+  // hourglass: glass outline, frame rings, sand above, falling stream, pile below
+  const hourglass = build((i, a, o) => {
+    const k = rnd[i * 4 + 2], H = 2.3;
+    const rad = (y) => 0.1 + 1.25 * Math.pow(Math.abs(y) / H, 0.85);
+    let x, y, z;
+    if (k < 0.4) { y = (Math.random() * 2 - 1) * H; const t = Math.random() * TAU, r = rad(y); x = Math.cos(t) * r; z = Math.sin(t) * r; }
+    else if (k < 0.55) { y = (Math.random() < 0.5 ? 1 : -1) * (H + 0.12); const t = Math.random() * TAU, r = 1.55 + gauss() * 0.04; x = Math.cos(t) * r; z = Math.sin(t) * r; }
+    else if (k < 0.62) { const t = Math.floor(Math.random() * 3) / 3 * TAU + 0.5; y = (Math.random() * 2 - 1) * (H + 0.1); x = Math.cos(t) * 1.55; z = Math.sin(t) * 1.55; }
+    else if (k < 0.78) { y = 0.5 + Math.random() * 1.2; const t = Math.random() * TAU, r = Math.sqrt(Math.random()) * rad(y) * 0.92; x = Math.cos(t) * r; z = Math.sin(t) * r; }
+    else if (k < 0.86) { y = -Math.random() * (H - 0.5); x = gauss() * 0.02; z = gauss() * 0.02; }
+    else { const h = Math.random() * 0.7; y = -H + h; const t = Math.random() * TAU, r = Math.sqrt(Math.random()) * (1 - h / 0.7) * rad(-H) * 0.9; x = Math.cos(t) * r; z = Math.sin(t) * r; }
+    a[o] = x; a[o + 1] = y; a[o + 2] = z;
   });
 
   // bloom: 3D rose curve petals
@@ -68,13 +83,23 @@
     a[o] = Math.cos(tt) * rad + gauss() * 0.05; a[o + 1] = Math.sin(tt) * rad * 0.9 + gauss() * 0.05; a[o + 2] = lift + gauss() * 0.08;
   });
 
-  const sphere = build((i, a, o) => {
-    const k = i + 0.5, phi = Math.acos(1 - 2 * k / N), th = Math.PI * (1 + Math.sqrt(5)) * k;
-    const r = rnd[i * 4 + 2] < 0.18 ? 2.2 + Math.random() * 1.8 : 2.2;
-    a[o] = Math.cos(th) * Math.sin(phi) * r; a[o + 1] = Math.cos(phi) * r; a[o + 2] = Math.sin(th) * Math.sin(phi) * r;
+  // full moon: sphere with thinned-out crater patches and a faint halo
+  const CRATERS = Array.from({ length: 14 }, () => { const u = Math.random() * 2 - 1, t = Math.random() * TAU, s = Math.sqrt(1 - u * u); return [s * Math.cos(t), u, s * Math.sin(t), 0.12 + Math.random() * 0.25]; });
+  const moon = build((i, a, o) => {
+    const R = 2.2;
+    if (rnd[i * 4 + 2] < 0.12) { const t = Math.random() * TAU, r = R + 0.25 + Math.abs(gauss()) * 0.9; a[o] = Math.cos(t) * r; a[o + 1] = Math.sin(t) * r; a[o + 2] = gauss() * 0.3; return; }
+    for (let tries = 0; tries < 6; tries++) {
+      const u = Math.random() * 2 - 1, t = Math.random() * TAU, s = Math.sqrt(1 - u * u);
+      const px = s * Math.cos(t), py = u, pz = s * Math.sin(t);
+      const inCrater = CRATERS.some(([cx, cy, cz, cr]) => (px - cx) ** 2 + (py - cy) ** 2 + (pz - cz) ** 2 < cr * cr);
+      if (!inCrater || Math.random() < 0.3 || tries === 5) { a[o] = px * R; a[o + 1] = py * R; a[o + 2] = pz * R; return; }
+    }
   });
 
   const field = build((i, a, o) => {
+    if (rnd[i * 4 + 2] < 0.35) { // milky way band
+      const x = (Math.random() - 0.5) * 22; a[o] = x; a[o + 1] = x * 0.32 + gauss() * 0.7; a[o + 2] = -4 - Math.random() * 6; return;
+    }
     a[o] = (Math.random() - 0.5) * 20; a[o + 1] = (Math.random() - 0.5) * 12; a[o + 2] = -Math.random() * 12 + 2;
   });
 
@@ -83,17 +108,17 @@
     a[o] = Math.cos(t) * r; a[o + 1] = Math.sin(t) * r; a[o + 2] = gauss() * 0.1;
   });
 
-  const shapes = [infinity, nebula, helix, torus, bloom, sphere, field, portrait];
-  // per-stage look: [offsetX desktop, offsetY desktop, offsetY mobile, dim, holo amount, spin]
+  const shapes = [sigil, galaxy, mountain, hourglass, bloom, moon, field, portrait];
+  // per-stage look: [offsetX desktop, offsetY desktop, offsetY mobile, dim, moonlight share, spin speed, rotation allowed]
   const LOOK = [
-    [3.0, 0.75, 2.2, 1.0, 0.18, 0.12],
-    [0, 0, 0, 0.75, 0.45, 0.05],
-    [1.0, 0, 0, 0.45, 0.5, 0.0],
-    [0, 0, 0, 1.0, 0.35, 0.1],
-    [0, 0, 0, 0.85, 0.85, 0.08],
-    [2.6, 0, 0, 0.6, 0.3, 0.15],
-    [0, 0, 0, 0.5, 0.4, 0.02],
-    [2.3, 0, 2.05, 1.0, 0.0, 0.0],
+    [2.75, 1.0, 2.35, 1.0, 0.1, 0.0, 0],
+    [0, 0, 0, 0.7, 0.5, 0.05, 1],
+    [1.0, 0, 0.3, 0.5, 0.06, 0.0, 0],
+    [0, 0, 0, 0.6, 0.12, 0.18, 1],
+    [0, 0, 0, 0.8, 0.3, 0.08, 1],
+    [2.6, 0, 0, 0.62, 0.85, 0.06, 1],
+    [0, 0, 0, 0.55, 0.6, 0.015, 1],
+    [2.3, 0, 2.05, 1.0, 0.0, 0.0, 0],
   ];
   const lastStage = shapes.length - 1;
 
@@ -103,8 +128,8 @@
     uniform mat4 uProj; uniform float uTime, uPixel, uSize, uHolo, uPhoto, uRot, uTiltX, uTiltY, uScale;
     uniform vec3 uOffset;
     varying vec3 vCol; varying float vA;
-    vec3 lime(float r) { return r < .55 ? vec3(.79,.95,.42) : r < .78 ? vec3(.92,1.,.82) : vec3(.95,.82,.48); }
-    vec3 holo(float r) { return r < .35 ? vec3(.72,.55,1.) : r < .68 ? vec3(1.,.55,.81) : vec3(.5,.9,1.); }
+    vec3 gold(float r) { return r < .5 ? vec3(.93,.72,.4) : r < .75 ? vec3(1.,.9,.7) : r < .9 ? vec3(.9,.5,.2) : vec3(1.,.97,.9); }
+    vec3 moon(float r) { return r < .55 ? vec3(.86,.89,.95) : r < .85 ? vec3(.66,.73,.88) : vec3(1.,.93,.82); }
     void main() {
       vec3 p = aPos * uScale;
       float t = uTime;
@@ -118,8 +143,8 @@
       gl_Position = uProj * mv;
       float sz = uSize * (.45 + aRnd.w * aRnd.w * 1.6);
       gl_PointSize = clamp(sz * uPixel / -mv.z, 1., 40.);
-      vec3 col = aRnd.y < uHolo ? holo(aRnd.z) : lime(aRnd.z);
-      vCol = mix(col, aPhoto, uPhoto);
+      vec3 col = aRnd.y < uHolo ? moon(aRnd.z) : gold(aRnd.z);
+      vCol = mix(col, aPhoto * vec3(1.08, .9, .7), uPhoto);
       vA = (.5 + .5 * sin(t * (1. + aRnd.x * 2.) + aRnd.y * 60.)) * .6 + .4;
       vA *= smoothstep(-22., -4., mv.z);
     }`;
@@ -156,7 +181,7 @@
   ['uProj', 'uTime', 'uPixel', 'uSize', 'uHolo', 'uPhoto', 'uRot', 'uTiltX', 'uTiltY', 'uScale', 'uOffset', 'uDim'].forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-  gl.clearColor(0.02, 0.027, 0.02, 1);
+  gl.clearColor(0.024, 0.02, 0.016, 1);
 
   let W = 0, H = 0, aspect = 1;
   const FOV = 50 * Math.PI / 180;
@@ -256,7 +281,7 @@
     gl.uniform1f(U.uTime, reduce ? 0 : now / 1000);
     const pw = Math.max(0, s - (lastStage - 1));
     let r = rot % TAU; if (r > Math.PI) r -= TAU;
-    gl.uniform1f(U.uRot, r * (1 - pw));
+    gl.uniform1f(U.uRot, r * lookAt(6));
     gl.uniform1f(U.uTiltX, mouse.x * (0.5 - pw * 0.3));
     gl.uniform1f(U.uTiltY, mouse.y * 0.3);
     gl.uniform3f(U.uOffset, ox, oy, 0);
